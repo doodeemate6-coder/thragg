@@ -6,17 +6,17 @@ import random
 
 # --- KEYS ---
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
 if not DISCORD_TOKEN:
     raise RuntimeError("Missing DISCORD_TOKEN environment variable")
-if not GROQ_API_KEY:
-    raise RuntimeError("Missing GROQ_API_KEY environment variable")
+if not OPENROUTER_API_KEY:
+    raise RuntimeError("Missing OPENROUTER_API_KEY environment variable")
 
-# --- GROQ CLIENT ---
+# --- OPENROUTER CLIENT ---
 client = OpenAI(
-    api_key=GROQ_API_KEY,
-    base_url="https://api.groq.com/openai/v1"
+    api_key=OPENROUTER_API_KEY,
+    base_url="https://openrouter.ai/api/v1"
 )
 
 # --- DISCORD SETUP ---
@@ -176,7 +176,7 @@ Feel like a REAL person trash talking in VC, not an AI generating random insults
 # --- AI FUNCTION ---
 def nemesis_ai(messages):
     response = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
+        model="meta-llama/llama-3.3-70b-instruct:free",
         messages=[
             {
                 "role": "system",
@@ -210,19 +210,16 @@ async def on_message(message):
     is_vip = user_id in VIP_USERS
     random_chance = random.random() < 0.07
 
-    # In servers: only respond if pinged, in an active convo in THIS channel, VIP, or random chance
     if message.guild is not None:
         if not pinged and not in_conversation and not is_vip and not random_chance:
             await bot.process_commands(message)
             return
 
-    # Clean ping text
     clean = message.content.replace(f"<@{bot.user.id}>", "").strip()
 
     if not clean:
         return
 
-    # Per-conversation history
     if convo_key not in conversation_histories:
         conversation_histories[convo_key] = []
 
@@ -248,7 +245,6 @@ async def on_message(message):
             "content": reply
         })
 
-        # Lock into this channel — keep responding to this user here
         active_conversations[convo_key] = True
 
     except Exception as e:
