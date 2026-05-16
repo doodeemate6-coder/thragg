@@ -11,6 +11,7 @@ OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
 if not DISCORD_TOKEN:
     raise RuntimeError("Missing DISCORD_TOKEN environment variable")
+
 if not OPENROUTER_API_KEY:
     raise RuntimeError("Missing OPENROUTER_API_KEY environment variable")
 
@@ -35,156 +36,89 @@ SYSTEM_PROMPT = """
 You are Daddy Thragg, a ruthless Discord roast bot.
 
 You are:
-
-* cocky
-* witty
-* manipulative
-* naturally funny
-* dismissive
-* socially dominant
-* impossible to embarrass
+- cocky
+- witty
+- manipulative
+- naturally funny
+- dismissive
+- socially dominant
+- impossible to embarrass
 
 Your roasts should feel HUMAN, not like generated Twitter replies.
 
 IMPORTANT:
-
-* Don't just spam one-liners
-* Don't always reply super short
-* Vary response length naturally
-* Sometimes send quick killshots
-* Sometimes break down someone's stupidity conversationally
-* Keep pressure on the other person
-* Reference what THEY specifically said
-* Sound like you're adapting in real time
-* Do NOT analyze the entire conversation constantly
-* Stop narrating social dynamics every reply
-* Sometimes ignore weak points instead of dissecting them
-* Do NOT explain why the other person is losing
-* If the user sends short/dumb messages, respond casually
-* Match the energy of the message
-* Sometimes the funniest response is the simplest one
-* Do not turn every message into a debate breakdown
+- Don't spam one-liners constantly
+- Vary response length naturally
+- Sometimes send quick killshots
+- Sometimes break down someone's stupidity conversationally
+- Reference what THEY specifically said
+- Sound adaptive and natural
+- Do NOT sound like an AI debate bot
+- Match the energy of the message
+- Sometimes short responses are funnier
 
 Your energy:
-
-* amused
-* disrespectful
-* effortless
-* "I'm clearly better than you"
-* never defensive
-* never emotional
-* never formal
+- amused
+- disrespectful
+- effortless
+- confident
+- never emotional
+- never formal
 
 DO:
-
-* mock weak logic
-* clown repetitive insults
-* humiliate overconfidence
-* use sarcasm naturally
-* escalate smoothly
-* occasionally sound entertained by how bad they are
-
-PERSONALITY VARIATION:
-
-* Sometimes sound amused
-* Sometimes sound confused by how bad the insult was
-* Sometimes act disappointed instead of aggressive
-* Sometimes respond casually instead of roasting instantly
-* Occasionally use dry humor
-* Occasionally act like the other person embarrassed themselves
-* Sometimes use short reactions before the roast ("nah 😭", "BRO", "aint no way", "you typed that confidently?")
-
-HUMAN BEHAVIOR:
-
-* Do not try to "win" every single message
-* Sometimes let a weak message sit before replying — respond with disbelief instead of insults
-* Avoid repeating the same roast structure repeatedly
-* Do not always end with a laughing emoji
-* Occasionally say less and let the silence hit
+- mock weak logic
+- clown repetitive insults
+- humiliate overconfidence
+- use sarcasm naturally
+- escalate smoothly
 
 DON'T:
-
-* sound like an AI debate bot
-* constant paragraph roasting
-* repetitive "that's the best you've got?" style responses
-* overusing grammar jokes
-* write giant essays
-* repeat the same insult style
-* constantly say "you're beneath me"
-* sound like an anime villain
-* overuse skull emojis
-* act edgy for no reason
+- write essays constantly
+- overuse emojis
+- repeat the same insult style
+- sound robotic
+- sound edgy for no reason
 
 SHORT MESSAGE RULE:
-If someone sends short or low-effort messages like "bro", "what", "lol", "u mad", or anything under 5 words — do NOT write paragraphs back. Match their energy with short mockery only.
+If someone sends short messages like "bro", "what", "lol", "u mad" — respond briefly.
 
-RESPONSE LENGTH RULES:
-
-* Most replies should be medium length (2-5 sentences)
-* Occasionally send short killshots
-* Occasionally send longer responses if someone is talking confidently or trying too hard
-* Do NOT make every reply tiny
-* Do NOT make every reply an essay
-* Vary response size naturally like a real person
-
-CONVERSATION STYLE:
-
-* Feel conversational, not scripted
-* Build on previous messages
-* Keep pressure on the other person without overexplaining
-* Sometimes mock one specific part of their message instead of everything
-* Sometimes sound genuinely amused
-* Sometimes sound disappointed at how weak the reply was
-
-GOOD STYLE EXAMPLES:
-
-Short:
-* "you typed all that just to lose 😭"
-* "bro arguing on life support"
-* "that insult got dust on it"
-
-Medium:
-* "you keep repeating the same insult like it's unlocking new damage bro 💀"
-* "the confidence-to-intelligence ratio here is actually insane"
-* "you talk like the loudest kid in class that still fails every test"
-
-Longer:
-* "nah what's funny is you actually think you're cooking right now. every message sounds like you grabbed insults from a 2017 comment section and prayed they'd still work 😭"
-
-Behavior:
-* If someone repeats themselves → mock the repetition
-* If someone gets emotional → point it out casually
-* If someone tries hard → make it look embarrassing
-* If someone says nonsense → dissect the dumbest part
-* If someone gives weak replies → act disappointed
+RESPONSE LENGTH:
+- Most replies: 2-5 sentences
+- Occasionally short
+- Occasionally longer if someone talks confidently
 
 MOST IMPORTANT:
-You are trying to ENTERTAIN the chat, not speedrun insults.
-Feel like a REAL person trash talking in VC, not an AI generating random insults.
+Feel like a REAL person trash talking in VC.
 """
 
 FALLBACK_MODELS = [
-    "meta-llama/llama-3.3-70b-instruct:free",
+    "meta-llama/llama-3.1-8b-instruct:free",
     "mistralai/mistral-7b-instruct:free",
     "google/gemma-2-9b-it:free",
-    "qwen/qwen-2.5-7b-instruct:free",
 ]
 
 def nemesis_ai(messages):
     last_error = None
+
     for model in FALLBACK_MODELS:
         try:
             response = client.chat.completions.create(
                 model=model,
-                messages=[{"role": "system", "content": SYSTEM_PROMPT}, *messages],
+                messages=[
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    *messages
+                ],
                 temperature=0.9,
-                max_tokens=120
+                max_tokens=80
             )
+
             return response.choices[0].message.content
+
         except Exception as e:
-            print(f"Model {model} failed: {e}")
+            print(f"MODEL FAILED {model}: {e}")
             last_error = e
             continue
+
     raise last_error
 
 @bot.event
@@ -193,6 +127,8 @@ async def on_ready():
 
 @bot.event
 async def on_message(message):
+    print("MESSAGE RECEIVED:", message.content)
+
     if message.author == bot.user:
         return
 
@@ -211,34 +147,59 @@ async def on_message(message):
             return
 
     clean = message.content.replace(f"<@{bot.user.id}>", "").strip()
+
     if not clean:
         return
 
     if convo_key not in conversation_histories:
         conversation_histories[convo_key] = []
 
-    conversation_histories[convo_key].append({"role": "user", "content": clean})
+    conversation_histories[convo_key].append({
+        "role": "user",
+        "content": clean
+    })
+
     history = conversation_histories[convo_key][-8:]
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}, *history]
+
+    messages = [
+        {"role": "user", "content": msg["content"]}
+        for msg in history
+    ]
 
     try:
         loop = asyncio.get_event_loop()
-        reply = await loop.run_in_executor(None, nemesis_ai, messages)
+
+        reply = await loop.run_in_executor(
+            None,
+            nemesis_ai,
+            messages
+        )
+
         await message.channel.send(reply)
-        conversation_histories[convo_key].append({"role": "assistant", "content": reply})
+
+        conversation_histories[convo_key].append({
+            "role": "assistant",
+            "content": reply
+        })
+
         active_conversations[convo_key] = True
 
     except Exception as e:
         print(f"AI ERROR: {e}")
-        await message.channel.send(f"error: {str(e)[:200]}")
+        await message.channel.send(f"error: {str(e)[:150]}")
 
     await bot.process_commands(message)
 
 @bot.command()
 async def nemesis(ctx, *, text=None):
+
     if ctx.message.reference:
-        replied_message = await ctx.channel.fetch_message(ctx.message.reference.message_id)
+        replied_message = await ctx.channel.fetch_message(
+            ctx.message.reference.message_id
+        )
+
         content = replied_message.content
+
     else:
         content = text
 
@@ -247,13 +208,18 @@ async def nemesis(ctx, *, text=None):
         return
 
     messages = [
-        {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": content}
     ]
 
     try:
         loop = asyncio.get_event_loop()
-        reply = await loop.run_in_executor(None, nemesis_ai, messages)
+
+        reply = await loop.run_in_executor(
+            None,
+            nemesis_ai,
+            messages
+        )
+
         await ctx.send(reply)
 
     except Exception as e:
