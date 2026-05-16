@@ -175,20 +175,34 @@ Feel naturally disrespectful.
 
 def nemesis_ai(messages):
 
-    response = client.chat.completions.create(
-        model="llama-3.1-8b-instant",
-        messages=[
-            {
-                "role": "system",
-                "content": SYSTEM_PROMPT
-            },
-            *messages
-        ],
-        temperature=0.9,
-        max_tokens=100
-    )
+    try:
 
-    return response.choices[0].message.content
+        response = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {
+                    "role": "system",
+                    "content": SYSTEM_PROMPT
+                },
+                *messages
+            ],
+            temperature=0.7,
+            max_tokens=180
+        )
+
+        return response.choices[0].message.content
+
+    except Exception as e:
+
+        print("GROQ ERROR:", e)
+
+        return random.choice([
+            "nah your message was so bad my brain lagged",
+            "bro broke the roasting engine 😭",
+            "you type like a failed side character",
+            "tf are you even saying anymore",
+            "nah that message genuinely made things worse"
+        ])
 
 # =========================
 # READY EVENT
@@ -250,7 +264,7 @@ async def on_message(message):
     })
 
     # Keep recent history only
-    history = conversation_histories[convo_key][-8:]
+    history = conversation_histories[convo_key][-4:]
 
     messages = history
 
