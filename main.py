@@ -1,3 +1,4 @@
+import asyncio
 import discord
 from discord.ext import commands
 from openai import OpenAI
@@ -25,18 +26,11 @@ intents.message_content = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# --- MEMORY: keyed by (channel_id, user_id) ---
 conversation_histories = {}
-
-# --- CONVERSATION MODE: keyed by (channel_id, user_id) ---
 active_conversations = {}
 
-# --- VIP USERS ---
-VIP_USERS = {
-    # Put Discord user IDs here if wanted
-}
+VIP_USERS = {}
 
-# --- PROMPT ---
 SYSTEM_PROMPT = """
 You are Daddy Thragg, a ruthless Discord roast bot.
 
@@ -145,23 +139,19 @@ CONVERSATION STYLE:
 GOOD STYLE EXAMPLES:
 
 Short:
-
 * "you typed all that just to lose 😭"
 * "bro arguing on life support"
 * "that insult got dust on it"
 
 Medium:
-
 * "you keep repeating the same insult like it's unlocking new damage bro 💀"
 * "the confidence-to-intelligence ratio here is actually insane"
 * "you talk like the loudest kid in class that still fails every test"
 
 Longer:
-
 * "nah what's funny is you actually think you're cooking right now. every message sounds like you grabbed insults from a 2017 comment section and prayed they'd still work 😭"
 
 Behavior:
-
 * If someone repeats themselves → mock the repetition
 * If someone gets emotional → point it out casually
 * If someone tries hard → make it look embarrassing
@@ -173,7 +163,6 @@ You are trying to ENTERTAIN the chat, not speedrun insults.
 Feel like a REAL person trash talking in VC, not an AI generating random insults.
 """
 
-# --- FREE MODELS TO TRY IN ORDER ---
 FALLBACK_MODELS = [
     "meta-llama/llama-3.3-70b-instruct:free",
     "mistralai/mistral-7b-instruct:free",
@@ -181,20 +170,13 @@ FALLBACK_MODELS = [
     "qwen/qwen-2.5-7b-instruct:free",
 ]
 
-# --- AI FUNCTION ---
 def nemesis_ai(messages):
     last_error = None
     for model in FALLBACK_MODELS:
         try:
             response = client.chat.completions.create(
                 model=model,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": SYSTEM_PROMPT
-                    },
-                    *messages
-                ],
+                messages=[{"role": "system", "content": SYSTEM_PROMPT}, *messages],
                 temperature=0.9,
                 max_tokens=120
             )
@@ -205,12 +187,10 @@ def nemesis_ai(messages):
             continue
     raise last_error
 
-# --- READY ---
 @bot.event
 async def on_ready():
     print(f"Logged in as {bot.user}")
 
-# --- MESSAGE HANDLER ---
 @bot.event
 async def on_message(message):
     if message.author == bot.user:
@@ -231,32 +211,21 @@ async def on_message(message):
             return
 
     clean = message.content.replace(f"<@{bot.user.id}>", "").strip()
-
     if not clean:
         return
 
     if convo_key not in conversation_histories:
         conversation_histories[convo_key] = []
 
-    conversation_histories[convo_key].append({
-        "role": "user",
-        "content": clean
-    })
-
+    conversation_histories[convo_key].append({"role": "user", "content": clean})
     history = conversation_histories[convo_key][-8:]
-
-    messages = [
-        {"role": "system", "content": SYSTEM_PROMPT},
-        *history
-    ]
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}, *history]
 
     try:
-        reply = nemesis_ai(messages)
+        loop = asyncio.get_event_loop()
+        reply = await loop.run_in_executor(None, nemesis_ai, messages)
         await message.channel.send(reply)
-        conversation_histories[convo_key].append({
-            "role": "assistant",
-            "content": reply
-        })
+        conversation_histories[convo_key].append({"role": "assistant", "content": reply})
         active_conversations[convo_key] = True
 
     except Exception as e:
@@ -265,14 +234,10 @@ async def on_message(message):
 
     await bot.process_commands(message)
 
-# --- COMMAND ---
 @bot.command()
 async def nemesis(ctx, *, text=None):
-
     if ctx.message.reference:
-        replied_message = await ctx.channel.fetch_message(
-            ctx.message.reference.message_id
-        )
+        replied_message = await ctx.channel.fetch_message(ctx.message.reference.message_id)
         content = replied_message.content
     else:
         content = text
@@ -287,12 +252,12 @@ async def nemesis(ctx, *, text=None):
     ]
 
     try:
-        reply = nemesis_ai(messages)
+        loop = asyncio.get_event_loop()
+        reply = await loop.run_in_executor(None, nemesis_ai, messages)
         await ctx.send(reply)
 
     except Exception as e:
         print(e)
         await ctx.send("my roasting engine exploded")
 
-# --- RUN ---
 bot.run(DISCORD_TOKEN)
