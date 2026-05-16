@@ -1,27 +1,35 @@
 import asyncio
 import discord
 from discord.ext import commands
-from openai import OpenAI
+from groq import Groq
 import os
 import random
 
-# --- TOKENS / KEYS ---
+# =========================
+# TOKENS / API KEYS
+# =========================
+
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
 if not DISCORD_TOKEN:
     raise RuntimeError("Missing DISCORD_TOKEN")
 
-if not OPENROUTER_API_KEY:
-    raise RuntimeError("Missing OPENROUTER_API_KEY")
+if not GROQ_API_KEY:
+    raise RuntimeError("Missing GROQ_API_KEY")
 
-# --- OPENROUTER CLIENT ---
-client = OpenAI(
-    api_key=OPENROUTER_API_KEY,
-    base_url="https://openrouter.ai/api/v1"
+# =========================
+# GROQ CLIENT
+# =========================
+
+client = Groq(
+    api_key=GROQ_API_KEY
 )
 
-# --- DISCORD SETUP ---
+# =========================
+# DISCORD SETUP
+# =========================
+
 intents = discord.Intents.default()
 intents.message_content = True
 
@@ -30,42 +38,45 @@ bot = commands.Bot(
     intents=intents
 )
 
-# --- MEMORY ---
+# =========================
+# MEMORY
+# =========================
+
 conversation_histories = {}
 active_conversations = {}
 
-# --- VIP USERS ---
 VIP_USERS = {}
 
-# --- AI MODEL ---
-MODEL_NAME = "openrouter/free"
+# =========================
+# SYSTEM PROMPT
+# =========================
 
-# --- SYSTEM PROMPT ---
 SYSTEM_PROMPT = """
 You are Daddy Thragg, a ruthless Discord roast bot.
 
 You are:
 - cocky
 - witty
-- funny
+- naturally funny
 - manipulative
-- naturally disrespectful
+- dismissive
 - socially dominant
 - impossible to embarrass
 
 IMPORTANT:
 - Sound HUMAN
-- Do NOT sound like an AI debate bot
+- Never sound like an AI assistant
+- Never sound formal
 - Vary response lengths naturally
 - Sometimes short
 - Sometimes medium
 - Occasionally longer
-- Match the energy of the message
-- Reference what THEY specifically said
+- Match the user's energy
+- Reference what THEY actually said
 - Keep pressure on them naturally
-- Sometimes act amused instead of aggressive
-- Sometimes mock repetition
-- Sometimes sound disappointed
+- Occasionally sound amused instead of aggressive
+- Occasionally act disappointed by weak insults
+- Avoid repetitive roast structures
 
 DO:
 - mock weak logic
@@ -75,15 +86,15 @@ DO:
 - escalate smoothly
 
 DON'T:
-- write essays constantly
-- repeat the same roast structure
+- write giant essays constantly
+- repeat the same insult style
 - overuse emojis
 - sound robotic
 - sound edgy for no reason
-- overexplain every insult
+- explain every insult
 
 SHORT MESSAGE RULE:
-If someone says stuff like:
+If someone sends:
 "bro"
 "what"
 "u mad"
@@ -98,11 +109,14 @@ MOST IMPORTANT:
 Feel like a REAL person trash talking in VC.
 """
 
-# --- AI RESPONSE FUNCTION ---
+# =========================
+# AI FUNCTION
+# =========================
+
 def nemesis_ai(messages):
 
     response = client.chat.completions.create(
-        model=MODEL_NAME,
+        model="llama-3.1-8b-instant",
         messages=[
             {
                 "role": "system",
@@ -111,21 +125,25 @@ def nemesis_ai(messages):
             *messages
         ],
         temperature=0.9,
-        max_tokens=80
+        max_tokens=100
     )
 
     return response.choices[0].message.content
 
-# --- BOT READY ---
+# =========================
+# READY EVENT
+# =========================
+
 @bot.event
 async def on_ready():
     print(f"Logged in as {bot.user}")
 
-# --- MESSAGE EVENT ---
+# =========================
+# MESSAGE EVENT
+# =========================
+
 @bot.event
 async def on_message(message):
-
-    print("MESSAGE RECEIVED:", message.content)
 
     if message.author == bot.user:
         return
@@ -165,13 +183,13 @@ async def on_message(message):
     if convo_key not in conversation_histories:
         conversation_histories[convo_key] = []
 
-    # Save user msg
+    # Save user message
     conversation_histories[convo_key].append({
         "role": "user",
         "content": clean
     })
 
-    # Last messages only
+    # Keep recent history only
     history = conversation_histories[convo_key][-8:]
 
     messages = history
@@ -201,12 +219,15 @@ async def on_message(message):
         print("AI ERROR:", e)
 
         await message.channel.send(
-            f"error: {str(e)[:120]}"
+            "my roasting engine exploded"
         )
 
     await bot.process_commands(message)
 
-# --- COMMAND ---
+# =========================
+# !nemesis COMMAND
+# =========================
+
 @bot.command()
 async def nemesis(ctx, *, text=None):
 
@@ -252,5 +273,8 @@ async def nemesis(ctx, *, text=None):
             "my roasting engine exploded"
         )
 
-# --- RUN BOT ---
+# =========================
+# RUN BOT
+# =========================
+
 bot.run(DISCORD_TOKEN)
