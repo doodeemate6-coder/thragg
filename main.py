@@ -93,7 +93,6 @@ Feel like a REAL person trash talking in VC.
 
 FALLBACK_MODELS = [
     "openchat/openchat-7b:free",
-    "mistralai/mistral-7b-instruct:free",
 ]
 
 def nemesis_ai(messages):
