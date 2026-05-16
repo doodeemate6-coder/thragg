@@ -237,19 +237,16 @@ async def on_message(message):
 
     try:
         reply = nemesis_ai(messages)
-
         await message.channel.send(reply)
-
         conversation_histories[convo_key].append({
             "role": "assistant",
             "content": reply
         })
-
         active_conversations[convo_key] = True
 
     except Exception as e:
-        print(e)
-        await message.channel.send("bro my brain lagged")
+        print(f"AI ERROR: {e}")
+        await message.channel.send(f"error: {str(e)[:200]}")
 
     await bot.process_commands(message)
 
@@ -271,10 +268,7 @@ async def nemesis(ctx, *, text=None):
 
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
-        {
-            "role": "user",
-            "content": content
-        }
+        {"role": "user", "content": content}
     ]
 
     try:
