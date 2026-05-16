@@ -173,22 +173,37 @@ You are trying to ENTERTAIN the chat, not speedrun insults.
 Feel like a REAL person trash talking in VC, not an AI generating random insults.
 """
 
+# --- FREE MODELS TO TRY IN ORDER ---
+FALLBACK_MODELS = [
+    "meta-llama/llama-3.3-70b-instruct:free",
+    "mistralai/mistral-7b-instruct:free",
+    "google/gemma-2-9b-it:free",
+    "qwen/qwen-2.5-7b-instruct:free",
+]
+
 # --- AI FUNCTION ---
 def nemesis_ai(messages):
-    response = client.chat.completions.create(
-        model="meta-llama/llama-3.3-70b-instruct:free",
-        messages=[
-            {
-                "role": "system",
-                "content": SYSTEM_PROMPT
-            },
-            *messages
-        ],
-        temperature=0.9,
-        max_tokens=120
-    )
-
-    return response.choices[0].message.content
+    last_error = None
+    for model in FALLBACK_MODELS:
+        try:
+            response = client.chat.completions.create(
+                model=model,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": SYSTEM_PROMPT
+                    },
+                    *messages
+                ],
+                temperature=0.9,
+                max_tokens=120
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+            print(f"Model {model} failed: {e}")
+            last_error = e
+            continue
+    raise last_error
 
 # --- READY ---
 @bot.event
