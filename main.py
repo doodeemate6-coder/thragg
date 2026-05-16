@@ -8,6 +8,11 @@ import random
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
+if not DISCORD_TOKEN:
+    raise RuntimeError("Missing DISCORD_TOKEN environment variable")
+if not GROQ_API_KEY:
+    raise RuntimeError("Missing GROQ_API_KEY environment variable")
+
 # --- GROQ CLIENT ---
 client = OpenAI(
     api_key=GROQ_API_KEY,
